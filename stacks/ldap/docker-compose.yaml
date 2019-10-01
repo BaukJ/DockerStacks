@@ -1,0 +1,35 @@
+version: '3.5'
+
+services:
+  app:
+    image: osixia/openldap:1.2.5
+    command: --copy-service #--loglevel debug
+    ports:
+      - 389:389
+#     - 636:636
+    configs:
+      - source: ldap
+        target: /container/service/slapd/assets/config/bootstrap/ldif/custom/config.ldif
+    networks:
+      ldap: {}
+
+  admin:
+    image: osixia/phpldapadmin
+    ports:
+      - 6443:443
+      # - 680:80
+    environment:
+     - PHPLDAPADMIN_LDAP_HOSTS=ldap
+    networks:
+      ldap: {}
+    depends_on:
+      - ldap
+
+
+configs:
+  ldap:
+    file: configs/ldap.ldif
+
+networks:
+  ldap: {}
+

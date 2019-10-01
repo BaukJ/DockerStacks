@@ -1,0 +1,97 @@
+version: '3.8'
+ 
+services:
+
+  app:
+    # image: openfrontier/gerrit:3.0.1  # LATEST
+    # image: openfrontier/gerrit:2.16.10  # LATEST 2.16
+    image: openfrontier/gerrit:2.15.14  # LATEST 2.15
+    # image: openfrontier/gerrit:2.14.20  # LATEST NEEDED MINOR
+    # image: openfrontier/gerrit:2.14.11  # NEEDED
+    # image: openfrontier/gerrit:2.11.x # CURRENT
+    # entrypoint: bash -c "while [ 0 ]; do sleep 10; done"
+    volumes:
+      - ./mounts/gerrit:/var/gerrit/review_site
+      - ./mounts/gerrit-ssh:/var/gerrit/.ssh
+    ports:
+      - 8080:8080
+      - 29418:29418
+    networks:
+      ldap: {}
+      default: {}
+    environment:
+      # - WEBURL=http://10.133.49.177:8080 # CHANGE THIS
+      - DATABASE_TYPE=mysql
+      - DB_PORT_3306_TCP_ADDR=db
+      - DB_PORT_3306_TCP_PORT=3306
+      - DB_ENV_MYSQL_DB=gerritdb
+      - DB_ENV_MYSQL_USER=root
+      - DB_ENV_MYSQL_PASSWORD=gerrit_test
+      - DATABASE_URL=jdbc:mysql://db:3306/gerritdb?autoReconnect=true&useSSL=false
+      - AUTH_TYPE=LDAP
+      - LDAP_SERVER=ldap://ldap_app
+      - LDAP_ACCOUNTBASE=dc=example,dc=org
+      - LDAP_PASSWORD=admin
+      - LDAP_USERNAME=cn=admin,dc=example,dc=org
+      - GERRIT_INIT_ARGS=--install-plugin=replication --install-plugin=download-commands
+      # - REPLICATION_REMOTES=standby
+      # - REPLICATE_ON_STARTUP=true
+      # - STANDBY_URL=ssh://standby:29418/${name}.git
+      # - STANDBY_THREADS=3
+    depends_on:
+      - db
+
+  standby:
+    # image: openfrontier/gerrit:3.0.1  # LATEST
+    # image: openfrontier/gerrit:2.16.10  # LATEST 2.16
+    image: openfrontier/gerrit:2.15.14  # LATEST 2.15
+    # image: openfrontier/gerrit:2.14.20  # LATEST NEEDED MINOR
+    # image: openfrontier/gerrit:2.14.11  # NEEDED
+    # image: openfrontier/gerrit:2.11.x # CURRENT
+    # entrypoint: bash -c "while [ 0 ]; do sleep 10; done"
+    volumes:
+      - ./mounts/standby:/var/gerrit/review_site
+    ports:
+      - 38080:8080
+      - 39418:29418
+    networks:
+      ldap: {}
+      default: {}
+    environment:
+      # - WEBURL=http://10.133.49.177:8080 # CHANGE THIS
+      - DATABASE_TYPE=mysql
+      - DB_PORT_3306_TCP_ADDR=db
+      - DB_PORT_3306_TCP_PORT=3306
+      - DB_ENV_MYSQL_DB=gerritdb
+      - DB_ENV_MYSQL_USER=root
+      - DB_ENV_MYSQL_PASSWORD=gerrit_test
+      - DATABASE_URL=jdbc:mysql://db:3306/gerritdb?autoReconnect=true&useSSL=false
+      - AUTH_TYPE=LDAP
+      - LDAP_SERVER=ldap://ldap_app
+      - LDAP_ACCOUNTBASE=dc=example,dc=org
+      - LDAP_PASSWORD=admin
+      - LDAP_USERNAME=cn=admin,dc=example,dc=org
+    depends_on:
+      - db
+
+  db:
+    image: mysql:5.7.27
+    command: --sql-mode="STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION"
+    volumes:
+      - ./mounts/db:/var/lib/mysql
+    networks:
+      default: {}
+    environment:
+      - MYSQL_ROOT_PASSWORD=gerrit_test
+      - MYSQL_DATABASE=gerritdb
+
+    
+# configs:
+#   gerrit_replication:
+#     file: configs/gerrit-replication.config
+
+networks:
+  ldap:
+    external: true
+    name: ldap_ldap
+
