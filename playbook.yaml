@@ -1,0 +1,135 @@
+- hosts: localhost
+  connection: local
+  #gather_facts: no
+  tasks:
+    - pip:
+        executable: pip3
+        name: [jsondiff]
+      become: true
+      tags: [never, setup]
+    - yum:
+        name: libselinux-python3
+      become: true
+      vars:
+        ansible_python_interpreter: /usr/bin/python2
+      tags: [never, setup]
+
+    - debug:
+        msg: "IP: {{ ansible_default_ipv4.address }}"
+    - include_role:
+        name: templates
+      tags:
+        - generate
+
+    - name: Deploy
+      tags:
+        - deploy
+      block:
+        - name: Gerrit invalid DNS workaround
+          block:
+            - file:
+                dest: stacks/gerrit/mounts/app/lib
+                state: directory
+              register: gerrit_lib
+            - get_url:
+                url: https://repo1.maven.org/maven2/mysql/mysql-connector-java/5.1.43/mysql-connector-java-5.1.43.jar
+                dest: stacks/gerrit/mounts/app/lib/
+              when: gerrit_lib.changed
+        - file:
+            dest: stacks/gerrit/app-ssh
+            state: directory
+            owner: "1000"
+          become: true
+        - docker_stack:
+            state: present
+            name: "{{ stack }}"
+            compose:
+              - "stacks/{{ stack }}/docker-compose.yaml"
+          loop: [ldap, gerrit]
+          loop_control:
+            loop_var: stack
+
+    - name: PostDeploy
+      tags:
+        - postdeploy
+      block:
+        - name: Wait for gerrit ssh port to be up
+          wait_for:
+            port: 29418
+            host: "{{ web_ip }}"
+        - openssh_keypair:
+            path: stacks/gerrit/admin_rsa
+          register: admin_rsa
+        - name: Upload gerrit ssh key
+          uri:
+            url: "http://{{ web_ip }}:8080/a/accounts/self/sshkeys"
+            user: "{{ creds_admin_username }}"
+            password: "{{ creds_admin_password }}"
+            method: POST
+            status_code: [200, 201]
+            headers:
+              Content-Type: plain/text
+            body: "{{ admin_rsa.public_key }}"
+        - name: Create template projects
+          uri:
+            url: "http://{{ web_ip }}:8080/a/projects/common/{{ project.name }}"
+            user: "{{ creds_admin_username }}"
+            password: "{{ creds_admin_password }}"
+            method: POST
+            status_code: [200, 201, 404] # 404 if already created
+            headers:
+              Content-Type: application/json
+            body_format: json
+            body:
+              description": "Common template project"
+          loop:
+            - name: spring-petclinic
+          loop_control:
+            loop_var: project
+        - name: Upload spring-petclinic repo
+          shell: |
+            eval $(ssh-agent)
+            ssh-add {{ admin_rsa.filename }}
+
+            rm -rf petclinic
+            git clone https://github.com/spring-projects/spring-petclinic.git petclinic
+
+            cd petclinic
+            git remote add gerrit ssh://{{ creds_admin_username }}@{{ web_ip }}:29418/common/spring-petclinic
+            git push gerrit main:refs/heads/master
+
+
+
+        #- name: Create base projects
+        #  uri:
+        #    url: "http://{{ web_ip }}:8080/a/projects/BASE-{{ user.id }}"
+        #    user: "{{ creds_admin_username }}"
+        #    password: "{{ creds_admin_password }}"
+        #    method: POST
+        #    status_code: [200, 201, 404] # 404 if already created
+        #    headers:
+        #      Content-Type: application/json
+        #    body_format: json
+        #    body:
+        #      description": "Base parent project for user: {{ user.id }}"
+        #  loop: "{{ users }}"
+        #  loop_control:
+        #    loop_var: user
+        #- name: Create User groups
+        #  uri:
+        #    url: "http://{{ web_ip }}:8080/a/groups/group-{{ user.id }}"
+        #    user: "{{ creds_admin_username }}"
+        #    password: "{{ creds_admin_password }}"
+        #    method: POST
+        #    status_code: [200, 201]
+        #    headers:
+        #      Content-Type: application/json
+        #    body_format: json
+        #    body:
+        #      owner: "{{ user.id }}"
+        #      members:
+        #        - username: "{{ user.id }}"
+        #  loop: "{{ users }}"
+        #  loop_control:
+        #    loop_var: user
+

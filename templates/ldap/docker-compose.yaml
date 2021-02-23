@@ -4,14 +4,19 @@ services:
   app:
     image: osixia/openldap:1.2.5
     command: --copy-service #--loglevel debug
-    ports:
-      - 389:389
-#     - 636:636
+    #ports:
+    #  - 389:389
+    #  - 636:636
+    volumes:
+      - ./mounts/app:/var/lib/ldap
+      - ./mounts/app-slapd.d:/etc/ldap/slapd.d
     configs:
       - source: ldap
         target: /container/service/slapd/assets/config/bootstrap/ldif/custom/config.ldif
     networks:
-      ldap: {}
+      ldap:
+        aliases:
+          - ldap
 
   admin:
     image: osixia/phpldapadmin
@@ -23,7 +28,7 @@ services:
     networks:
       ldap: {}
     depends_on:
-      - ldap
+      - app
 
 
 configs:

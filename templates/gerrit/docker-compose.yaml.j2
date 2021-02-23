@@ -3,16 +3,11 @@ version: '3.8'
 services:
 
   app:
-    # image: openfrontier/gerrit:3.0.1  # LATEST
-    # image: openfrontier/gerrit:2.16.10  # LATEST 2.16
-    image: openfrontier/gerrit:2.15.14  # LATEST 2.15
-    # image: openfrontier/gerrit:2.14.20  # LATEST NEEDED MINOR
-    # image: openfrontier/gerrit:2.14.11  # NEEDED
-    # image: openfrontier/gerrit:2.11.x # CURRENT
+    image: openfrontier/gerrit:{{ gerrit_version }}
     # entrypoint: bash -c "while [ 0 ]; do sleep 10; done"
     volumes:
-      - ./mounts/gerrit:/var/gerrit/review_site
-      - ./mounts/gerrit-ssh:/var/gerrit/.ssh
+      - ./mounts/app:/var/gerrit/review_site
+      - ./mounts/app-ssh:/var/gerrit/.ssh
     ports:
       - 8080:8080
       - 29418:29418
@@ -20,7 +15,7 @@ services:
       ldap: {}
       default: {}
     environment:
-      # - WEBURL=http://10.133.49.177:8080 # CHANGE THIS
+      - WEBURL=http://{{ web_ip }}:8080
       - DATABASE_TYPE=mysql
       - DB_PORT_3306_TCP_ADDR=db
       - DB_PORT_3306_TCP_PORT=3306
@@ -29,7 +24,7 @@ services:
       - DB_ENV_MYSQL_PASSWORD=gerrit_test
       - DATABASE_URL=jdbc:mysql://db:3306/gerritdb?autoReconnect=true&useSSL=false
       - AUTH_TYPE=LDAP
-      - LDAP_SERVER=ldap://ldap_app
+      - LDAP_SERVER=ldap://ldap
       - LDAP_ACCOUNTBASE=dc=example,dc=org
       - LDAP_PASSWORD=admin
       - LDAP_USERNAME=cn=admin,dc=example,dc=org
@@ -42,13 +37,7 @@ services:
       - db
 
   standby:
-    # image: openfrontier/gerrit:3.0.1  # LATEST
-    # image: openfrontier/gerrit:2.16.10  # LATEST 2.16
-    image: openfrontier/gerrit:2.15.14  # LATEST 2.15
-    # image: openfrontier/gerrit:2.14.20  # LATEST NEEDED MINOR
-    # image: openfrontier/gerrit:2.14.11  # NEEDED
-    # image: openfrontier/gerrit:2.11.x # CURRENT
-    # entrypoint: bash -c "while [ 0 ]; do sleep 10; done"
+    image: openfrontier/gerrit:{{ gerrit_version }}
     volumes:
       - ./mounts/standby:/var/gerrit/review_site
     ports:
@@ -58,7 +47,7 @@ services:
       ldap: {}
       default: {}
     environment:
-      # - WEBURL=http://10.133.49.177:8080 # CHANGE THIS
+      - WEBURL=http://{{ web_ip }}:38080
       - DATABASE_TYPE=mysql
       - DB_PORT_3306_TCP_ADDR=db
       - DB_PORT_3306_TCP_PORT=3306
@@ -73,6 +62,8 @@ services:
       - LDAP_USERNAME=cn=admin,dc=example,dc=org
     depends_on:
       - db
+    deploy:
+      replicas: 0
 
   db:
     image: mysql:5.7.27
@@ -80,7 +71,9 @@ services:
     volumes:
       - ./mounts/db:/var/lib/mysql
     networks:
-      default: {}
+      default:
+        aliases:
+          - db
     environment:
       - MYSQL_ROOT_PASSWORD=gerrit_test
       - MYSQL_DATABASE=gerritdb

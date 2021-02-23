@@ -1,0 +1,13 @@
+all:
+  vars:
+    web_ip: 192.168.222.222
+    gerrit_version: 2.15.18
+    creds_admin_username: admin
+    creds_admin_password: admin
+    users:
+      - id: jjas
+docker:
+  hosts:
+    gerrit:
+      ansible_connection: docker
+
