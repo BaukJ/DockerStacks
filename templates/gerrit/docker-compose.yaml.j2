@@ -26,8 +26,8 @@ services:
       - AUTH_TYPE=LDAP
       - LDAP_SERVER=ldap://ldap
       - LDAP_ACCOUNTBASE=dc=example,dc=org
-      - LDAP_PASSWORD=admin
-      - LDAP_USERNAME=cn=admin,dc=example,dc=org
+      - LDAP_PASSWORD={{ creds_ldap_bind_password }}
+      - LDAP_USERNAME={{ creds_ldap_bind_username }}
       - GERRIT_INIT_ARGS=--install-plugin=replication --install-plugin=download-commands
       # - REPLICATION_REMOTES=standby
       # - REPLICATE_ON_STARTUP=true

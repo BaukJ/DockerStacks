@@ -4,8 +4,15 @@ all:
     gerrit_version: 2.15.18
     creds_admin_username: admin
     creds_admin_password: admin
+    creds_admin_password_md5: ISMvKXpXpadDiUoOSoAfww==
+    creds_ldap_bind_password: admin
+    creds_ldap_bind_username: cn=admin,dc=example,dc=org
     users:
       - id: jjas
+        name: Kuba Jasko
+        email: kubajasko@hotmail.com
+      - id: jblo
+        name: Joe Reginald Bloggs
 docker:
   hosts:
     gerrit:

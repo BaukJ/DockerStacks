@@ -14,9 +14,7 @@
         ansible_python_interpreter: /usr/bin/python2
       tags: [never, setup]
 
-    - debug:
-        msg: "IP: {{ ansible_default_ipv4.address }}"
-    - include_role:
+    - import_role:
         name: templates
       tags:
         - generate
@@ -50,6 +48,7 @@
             loop_var: stack
 
     - name: PostDeploy
+      # TODO: delegate to gerrit container so that the ssh keys are not an issue
       tags:
         - postdeploy
       block:
@@ -70,13 +69,15 @@
             headers:
               Content-Type: plain/text
             body: "{{ admin_rsa.public_key }}"
+        - debug:
         - name: Create template projects
           uri:
-            url: "http://{{ web_ip }}:8080/a/projects/common/{{ project.name }}"
+            url: "http://{{ web_ip }}:8080/a/projects/{{ ('common/' + project.name) | urlencode | replace('/', '%2f') }}"
             user: "{{ creds_admin_username }}"
             password: "{{ creds_admin_password }}"
             method: POST
             status_code: [200, 201, 404] # 404 if already created
+            status_code: [200, 201] # 404 if already created
             headers:
               Content-Type: application/json
             body_format: json
@@ -97,6 +98,20 @@
             cd petclinic
             git remote add gerrit ssh://{{ creds_admin_username }}@{{ web_ip }}:29418/common/spring-petclinic
             git push gerrit main:refs/heads/master
+
+    - name: Lesson1
+      tags: [never, lesson1]
+      block: []
+      # TODO: don't use block, call a role with each user
+
+
+    - name: Info
+      tags: [info, always]
+      block:
+        - debug:
+            msg: |
+              Gerrit     available here: http://{{ web_ip }}:8080
+              LDAP Admin available here: https://{{ web_ip}}:6443
 
 
 

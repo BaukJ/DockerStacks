@@ -1,3 +1,4 @@
+{% raw -%}
 # # # # # UNITS
 dn: ou=people,{{ LDAP_BASE_DN }}
 changetype: add
@@ -13,7 +14,6 @@ objectClass: organizationalUnit
 objectClass: top
 
 # # # # # PEOPLE
-# jenkins - password: jenkins
 -
 dn: cn=jenkins,ou=people,{{ LDAP_BASE_DN }}
 changetype: add
@@ -29,24 +29,42 @@ objectclass: top
 objectclass: posixAccount
 objectclass: inetOrgPerson
 
-# admin - password: admin
 -
 dn: cn=admin,ou=people,{{ LDAP_BASE_DN }}
 changetype: add
 givenname: Admin (Delete me)
 sn: Strator
-uid: admin
+{% endraw %}
+uid: {{ creds_admin_username }}
 uidnumber: 7000
 gidnumber: 501
 mail: admin@example.com
 homedirectory: /home/admin
-userpassword: {MD5}ISMvKXpXpadDiUoOSoAfww==
+userpassword: {{ creds_admin_password }}
 description: DELETE ME!
  I am only for testing!
 objectclass: top
 objectclass: posixAccount
 objectclass: inetOrgPerson
 
+{% for user in users %}
+-
+dn: cn={{ user.id + ",ou=people,{{ LDAP_BASE_DN }}" }}
+changetype: add
+givenname: {{ user.name | regex_replace('^([^ ]*) *(.*)$', '\\1') }}
+sn: {{        user.name | regex_replace('^([^ ]*) *(.*)$', '\\2') }}
+uid: {{ user.id }}
+uidnumber: {{ 8000 + loop.index }}
+gidnumber: 501
+mail: {{ user.email | default(user.id+"@example.com") }}
+homedirectory: /home/{{ user.id }}
+userpassword: {{ user.password | default("password") }}
+objectclass: top
+objectclass: posixAccount
+objectclass: inetOrgPerson
+
+{% endfor %}
+{% raw -%}
 # # # # # GROUPS
 -
 dn: cn=jenkins_admin,ou=groups,{{ LDAP_BASE_DN }}
@@ -54,6 +72,18 @@ changetype: add
 gidNumber: 101
 memberuid: jenkins
 memberuid: admin
+objectClass: PosixGroup
+objectClass: top
+
+-
+dn: cn=jenkins_users,ou=groups,{{ LDAP_BASE_DN }}
+changetype: add
+gidNumber: 102
+{% endraw %}
+{% for user in users %}
+memberuid: {{ user.id }}
+{% endfor %}
+{% raw -%}
 objectClass: PosixGroup
 objectClass: top
 
@@ -66,10 +96,15 @@ objectClass: PosixGroup
 objectClass: top
 
 -
-dn: cn=gerrit_elevated,ou=groups,{{ LDAP_BASE_DN }}
+dn: cn=gerrit_users,ou=groups,{{ LDAP_BASE_DN }}
 changetype: add
 gidNumber: 112
 memberuid: admin
+{% endraw %}
+{% for user in users %}
+memberuid: {{ user.id }}
+{% endfor %}
+{% raw -%}
 objectClass: PosixGroup
 objectClass: top
 
@@ -88,3 +123,4 @@ gidNumber: 121
 memberuid: admin
 objectClass: PosixGroup
 objectClass: top
+{%- endraw %}
