@@ -56,6 +56,13 @@
           wait_for:
             port: 29418
             host: "{{ web_ip }}"
+        - name: Initialise admin user
+          uri:
+            url: "http://{{ web_ip }}:8080/login?username={{ creds_admin_username }}&password={{ creds_admin_password }}"
+            status_code: [302]
+            headers:
+              Content-Type: plain/text
+            body: "{{ admin_rsa.public_key }}"
         - file:
             path: "{{ playbook_dir }}/stacks/gerrit/keys"
             state: directory

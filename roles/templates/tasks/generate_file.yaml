@@ -1,14 +1,15 @@
-- file:
+- name: "Create folder: {{ template.path }}"
+  file:
     path: "stacks/{{ template.path }}"
     state: directory
     recurse: yes
   when: template.state == 'directory'
-- name: "Generate {{ template.name }}"
+- name: "Generate: {{ template.src }}"
   template:
     src: "{{ template.src }}"
     dest: "stacks/{{ template.path | regex_replace('.j2$', '') }}"
   when: template.state == 'file' and template.path is regex(".*\.j2")
-- name: "Generate {{ template.name }}"
+- name: "Copy: {{ template.src }}"
   copy:
     src: "{{ template.src }}"
     dest: "stacks/{{ template.path | regex_replace('.j2$', '') }}"

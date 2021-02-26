@@ -7,6 +7,7 @@ all:
     creds_admin_password_md5: ISMvKXpXpadDiUoOSoAfww==
     creds_ldap_bind_password: admin
     creds_ldap_bind_username: cn=admin,dc=example,dc=org
+    compose_version: 3.8
     users:
       jjas:
         name: Kuba Jasko
