@@ -47,17 +47,17 @@ objectclass: top
 objectclass: posixAccount
 objectclass: inetOrgPerson
 
-{% for user in users %}
+{% for id,user in users %}
 -
 dn: cn={{ user.id + ",ou=people,{{ LDAP_BASE_DN }}" }}
 changetype: add
 givenname: {{ user.name | regex_replace('^([^ ]*) *(.*)$', '\\1') }}
 sn: {{        user.name | regex_replace('^([^ ]*) *(.*)$', '\\2') }}
-uid: {{ user.id }}
+uid: {{ id }}
 uidnumber: {{ 8000 + loop.index }}
 gidnumber: 501
 mail: {{ user.email | default(user.id+"@example.com") }}
-homedirectory: /home/{{ user.id }}
+homedirectory: /home/{{ id }}
 userpassword: {{ user.password | default("password") }}
 objectclass: top
 objectclass: posixAccount
@@ -80,8 +80,8 @@ dn: cn=jenkins_users,ou=groups,{{ LDAP_BASE_DN }}
 changetype: add
 gidNumber: 102
 {% endraw %}
-{% for user in users %}
-memberuid: {{ user.id }}
+{% for id,user in users %}
+memberuid: {{ id }}
 {% endfor %}
 {% raw -%}
 objectClass: PosixGroup
@@ -101,8 +101,8 @@ changetype: add
 gidNumber: 112
 memberuid: admin
 {% endraw %}
-{% for user in users %}
-memberuid: {{ user.id }}
+{% for id,user in users %}
+memberuid: {{ id }}
 {% endfor %}
 {% raw -%}
 objectClass: PosixGroup

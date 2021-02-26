@@ -2,17 +2,18 @@
   connection: local
   #gather_facts: no
   tasks:
-    - pip:
-        executable: pip3
-        name: [jsondiff]
-      become: true
+    - name: Setup
       tags: [never, setup]
-    - yum:
-        name: libselinux-python3
-      become: true
-      vars:
-        ansible_python_interpreter: /usr/bin/python2
-      tags: [never, setup]
+      block:
+        - pip:
+            executable: pip3
+            name: [jsondiff]
+          become: true
+        - yum:
+            name: libselinux-python3
+          become: true
+          vars:
+            ansible_python_interpreter: /usr/bin/python2
 
     - import_role:
         name: templates
@@ -26,15 +27,15 @@
         - name: Gerrit invalid DNS workaround
           block:
             - file:
-                dest: stacks/gerrit/mounts/app/lib
+                dest: "{{ playbook_dir }}/stacks/gerrit/mounts/app/lib"
                 state: directory
               register: gerrit_lib
             - get_url:
                 url: https://repo1.maven.org/maven2/mysql/mysql-connector-java/5.1.43/mysql-connector-java-5.1.43.jar
-                dest: stacks/gerrit/mounts/app/lib/
+                dest: "{{ playbook_dir }}/stacks/gerrit/mounts/app/lib/"
               when: gerrit_lib.changed
         - file:
-            dest: stacks/gerrit/app-ssh
+            dest: "{{ playbook_dir }}/stacks/gerrit/app-ssh"
             state: directory
             owner: "1000"
           become: true
@@ -42,13 +43,12 @@
             state: present
             name: "{{ stack }}"
             compose:
-              - "stacks/{{ stack }}/docker-compose.yaml"
+              - "{{ playbook_dir }}/stacks/{{ stack }}/docker-compose.yaml"
           loop: [ldap, gerrit]
           loop_control:
             loop_var: stack
 
     - name: PostDeploy
-      # TODO: delegate to gerrit container so that the ssh keys are not an issue
       tags:
         - postdeploy
       block:
@@ -56,8 +56,11 @@
           wait_for:
             port: 29418
             host: "{{ web_ip }}"
+        - file:
+            path: "{{ playbook_dir }}/stacks/gerrit/keys"
+            state: directory
         - openssh_keypair:
-            path: stacks/gerrit/admin_rsa
+            path: "{{ playbook_dir }}/stacks/gerrit/keys/admin_rsa"
           register: admin_rsa
         - name: Upload gerrit ssh key
           uri:
@@ -69,7 +72,17 @@
             headers:
               Content-Type: plain/text
             body: "{{ admin_rsa.public_key }}"
-        - debug:
+        - blockinfile:
+            path: "{{ ansible_env.HOME }}/.ssh/config"
+            block: |
+              Host gerrit_local_admin
+                HostName "{{ web_ip }}"
+                Port 29418
+                StrictHostKeyChecking no
+                UserKnownHostsFile /dev/null
+                IdentityFile {{ admin_rsa.filename }}
+                IdentitiesOnly yes
+                User {{ creds_admin_username }}
         - name: Create template projects
           uri:
             url: "http://{{ web_ip }}:8080/a/projects/{{ ('common/' + project.name) | urlencode | replace('/', '%2f') }}"
@@ -77,7 +90,7 @@
             password: "{{ creds_admin_password }}"
             method: POST
             status_code: [200, 201, 404] # 404 if already created
-            status_code: [200, 201] # 404 if already created
+            #status_code: [200, 201] # 404 if already created
             headers:
               Content-Type: application/json
             body_format: json
@@ -89,20 +102,27 @@
             loop_var: project
         - name: Upload spring-petclinic repo
           shell: |
-            eval $(ssh-agent)
-            ssh-add {{ admin_rsa.filename }}
-
-            rm -rf petclinic
-            git clone https://github.com/spring-projects/spring-petclinic.git petclinic
+            rm -rf tmp_upload_repos
+            mkdir tmp_upload_repos
+            cd tmp_upload_repos
+            git clone git@github.com:BaukJ/spring-petclinic.git
 
             cd petclinic
-            git remote add gerrit ssh://{{ creds_admin_username }}@{{ web_ip }}:29418/common/spring-petclinic
+            git remote add gerrit ssh://gerrit_local_admin/common/spring-petclinic
             git push gerrit main:refs/heads/master
 
+            cd ../..
+            rm -r tmp_upload_repos
+
+            ssh gerrit_local_admin gerrit set-members Administrators --add {{ users.keys() | join( ' --add ' ) }}
+        - name: Setup Users
+          include: plays/setup_user.yaml
+          loop: "{{ users.keys() }}"
+          loop_control:
+            loop_var: user
     - name: Lesson1
       tags: [never, lesson1]
       block: []
-      # TODO: don't use block, call a role with each user
 
 
     - name: Info
@@ -110,8 +130,8 @@
       block:
         - debug:
             msg: |
-              Gerrit     available here: http://{{ web_ip }}:8080
-              LDAP Admin available here: https://{{ web_ip}}:6443
+              Gerrit     available here: http://{{  web_ip }}:8080 |
+              LDAP Admin available here: https://{{ web_ip }}:6443 |
 
 
 

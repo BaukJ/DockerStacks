@@ -1,0 +1,8 @@
+- name: Create user ssh key
+  openssh_keypair:
+    path: "{{ playbook_dir }}/stacks/gerrit/keys/{{ user }}_rsa"
+  register: user_rsa
+- name: Add user ssh key and to Admin group
+  shell: |
+    ssh gerrit_local_admin gerrit set-members Administrators --add {{ user }}
+    ssh gerrit_local_admin gerrit set-account {{ user }} --add-ssh-key "'{{ user_rsa.public_key }}'"
