@@ -14,6 +14,7 @@ services:
     networks:
       ldap: {}
       default: {}
+      traefik: {}
     environment:
       - WEBURL=http://{{ web_ip }}:8080
       - DATABASE_TYPE=mysql
@@ -33,8 +34,14 @@ services:
       # - REPLICATE_ON_STARTUP=true
       # - STANDBY_URL=ssh://standby:29418/${name}.git
       # - STANDBY_THREADS=3
+      - HTTPD_LISTENURL=proxy-http://*:8080/gerrit/
     depends_on:
       - db
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.seg-main.frontend.rule=PathPrefix:/gerrit"
+        - "traefik.port=8080"
 
   standby:
     image: openfrontier/gerrit:{{ gerrit_version }}
@@ -86,5 +93,7 @@ services:
 networks:
   ldap:
     external: true
-    name: ldap_ldap
-
+    name: common_ldap
+  traefik:
+    external: true
+    name: common_traefik

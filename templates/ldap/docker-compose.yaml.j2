@@ -35,6 +35,8 @@ configs:
   ldap:
     file: configs/ldap.ldif
 
-networks:
-  ldap: {}
 
+networks:
+  ldap:
+    external: true
+    name: common_ldap

@@ -1,0 +1,37 @@
+version: '{{ compose_version }}'
+
+services:
+  master:
+    image: jenkins_master
+    build: images/master
+    environment:
+      JENKINS_OPTS: "--prefix=/jenkins --httpPort=9000"
+    volumes:
+      - ./mounts/master:/var/jenkins_home
+    ports:
+      - 9000:9000
+    networks:
+      - ldap
+      - traefik
+      - jenkins
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.seg-main.frontend.rule=PathPrefix:/jenkins"
+        - "traefik.port=9000"
+
+  slave:
+    image: openjdk:17-slim
+    deploy:
+      replicas: 0
+    networks:
+      - jenkins
+
+networks:
+  jenkins: {}
+  ldap:
+    external: true
+    name: common_ldap
+  traefik:
+    external: true
+    name: common_traefik

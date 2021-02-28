@@ -6,8 +6,12 @@
       tags: [never, setup]
       block:
         - pip:
-            executable: pip3
-            name: [jsondiff]
+            executable: pip2
+            name: [docker, pip==20.3.3]
+          become: true
+        - pip:
+            executable: /usr/local/bin/pip3
+            name: [jsondiff, compose, docker-compose]
           become: true
         - yum:
             name: libselinux-python3
@@ -39,14 +43,22 @@
             state: directory
             owner: "1000"
           become: true
-        - docker_stack:
+        - docker_compose:
+            build: yes
+            project_src: "{{ playbook_dir }}/stacks/{{ stack }}"
             state: present
-            name: "{{ stack }}"
-            compose:
-              - "{{ playbook_dir }}/stacks/{{ stack }}/docker-compose.yaml"
-          loop: [ldap, gerrit]
+          loop: [common, traefik, ldap, gerrit, jenkins]
           loop_control:
             loop_var: stack
+        # Just using compose for now. If we want to deploy we'd have to push images somewhere
+        #- docker_stack:
+        #    state: present
+        #    name: "{{ stack }}"
+        #    compose:
+        #      - "{{ playbook_dir }}/stacks/{{ stack }}/docker-compose.yaml"
+        #  loop: [ldap, gerrit, jenkins]
+        #  loop_control:
+        #    loop_var: stack
 
     - name: PostDeploy
       tags:
@@ -60,9 +72,7 @@
           uri:
             url: "http://{{ web_ip }}:8080/login?username={{ creds_admin_username }}&password={{ creds_admin_password }}"
             status_code: [302]
-            headers:
-              Content-Type: plain/text
-            body: "{{ admin_rsa.public_key }}"
+            method: POST
         - file:
             path: "{{ playbook_dir }}/stacks/gerrit/keys"
             state: directory
