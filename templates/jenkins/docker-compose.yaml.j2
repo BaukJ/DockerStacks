@@ -6,6 +6,7 @@ services:
     build: images/master
     environment:
       JENKINS_OPTS: "--prefix=/jenkins --httpPort=9000"
+      CASC_JENKINS_CONFIG: "/jenkins.yaml"
     volumes:
       - ./mounts/master:/var/jenkins_home
     ports:
@@ -14,6 +15,9 @@ services:
       - ldap
       - traefik
       - jenkins
+    configs:
+      - source: jenkins
+        target: /jenkins.yaml
     deploy:
       labels:
         - "traefik.enable=true"
@@ -22,10 +26,21 @@ services:
 
   slave:
     image: openjdk:17-slim
-    deploy:
-      replicas: 0
+    command: ["/slave_connect.sh", "worker1"]
+    configs:
+      - source: slave_connect
+        target: /slave_connect.sh
+        mode: 0555
     networks:
       - jenkins
+    deploy:
+      replicas: 1
+
+configs:
+  jenkins:
+    file: configs/jenkins.yaml
+  slave_connect:
+    file: configs/slave_connect.sh
 
 networks:
   jenkins: {}

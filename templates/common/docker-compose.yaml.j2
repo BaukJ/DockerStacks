@@ -1,6 +1,13 @@
 version: '{{ compose_version }}'
 
-services: {}
+services:
+  app:
+    image: httpd
+    networks:
+      ldap: {}
+      traefik: {}
+    deploy:
+      replicas: 0
 
 networks:
   ldap: {}

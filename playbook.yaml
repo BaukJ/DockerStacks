@@ -43,22 +43,29 @@
             state: directory
             owner: "1000"
           become: true
+        - file:
+            dest: "{{ playbook_dir }}/stacks/jenkins/mounts/master"
+            state: directory
+            owner: "1000"
+          become: true
         - docker_compose:
             build: yes
             project_src: "{{ playbook_dir }}/stacks/{{ stack }}"
-            state: present
-          loop: [common, traefik, ldap, gerrit, jenkins]
+            state: absent
+          loop: [jenkins]
+          #loop: [common, traefik, ldap, gerrit, jenkins]
           loop_control:
             loop_var: stack
         # Just using compose for now. If we want to deploy we'd have to push images somewhere
-        #- docker_stack:
-        #    state: present
-        #    name: "{{ stack }}"
-        #    compose:
-        #      - "{{ playbook_dir }}/stacks/{{ stack }}/docker-compose.yaml"
-        #  loop: [ldap, gerrit, jenkins]
-        #  loop_control:
-        #    loop_var: stack
+        - docker_stack:
+            state: present
+            name: "{{ stack }}"
+            compose:
+              - "{{ playbook_dir }}/stacks/{{ stack }}/docker-compose.yaml"
+          #loop: [common, traefik, ldap, gerrit, jenkins]
+          loop: [common, traefik, ldap, jenkins]
+          loop_control:
+            loop_var: stack
 
     - name: PostDeploy
       tags:
