@@ -1,13 +1,22 @@
 jenkins:
+  numExecutors: 2
+  authorizationStrategy:
+    globalMatrix:
+      permissions:
+      - "Overall/Administer:jenkins_admin"
+      - "Overall/Administer:jenkins_users"
+      - "Overall/Read:authenticated"
   securityRealm:
     ldap:
       configurations:
-        - groupMembershipStrategy:
-            fromUserRecord:
-              attributeName: "memberOf"
+        - displayNameAttributeName: "cn"
+          groupSearchBase: "ou=groups"
           inhibitInferRootDN: false
+          managerDN: "cn=admin,dc=example,dc=org"
+          managerPasswordSecret: "{AQAAABAAAAAQH1PGC4nQAshwNpFa62LKm1hnD3tVeqW/hr/hl6JBkPA=}"
           rootDN: "dc=example,dc=org"
-          server: "ldaps://ldap:389"
+          server: "ldap"
+          userSearchBase: "ou=people"
   nodes:
 {% for id,node in jenkins_nodes.items() %}
 {%  for n in range(node.count | default(1)) %}

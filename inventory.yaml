@@ -11,7 +11,7 @@ all:
     jenkins_nodes:
       openjdk:
         image: openjdk:17-slim
-        count: 3
+        count: 1
     users:
       jjas:
         name: Kuba Jasko
