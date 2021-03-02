@@ -9,9 +9,12 @@ jenkins:
           rootDN: "dc=example,dc=org"
           server: "ldaps://ldap:389"
   nodes:
+{% for id,node in jenkins_nodes.items() %}
+{%  for n in range(node.count | default(1)) %}
     - permanent:
-        name: "worker1"
+        name: "{{ id }}_{{ n + 1 }}"
         remoteFS: "/home/jenkins"
+        numExecutors: {{ node.executors | default(1) }}
         launcher:
           jnlp:
             workDirSettings:
@@ -19,5 +22,7 @@ jenkins:
               failIfWorkDirIsMissing: false
               internalDir: "remoting"
               workDirPath: "/tmp"
+{%  endfor %}
+{% endfor %}
 
 

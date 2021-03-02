@@ -24,9 +24,10 @@ services:
         - "traefik.seg-main.frontend.rule=PathPrefix:/jenkins"
         - "traefik.port=9000"
 
-  slave:
-    image: openjdk:17-slim
-    command: ["/slave_connect.sh", "worker1"]
+{%for id,node in jenkins_nodes.items() %}
+  slave_{{ id }}:
+    image: {{ node.image }}
+    command: ["/slave_connect.sh", "{{ id }}"]
     configs:
       - source: slave_connect
         target: /slave_connect.sh
@@ -34,7 +35,8 @@ services:
     networks:
       - jenkins
     deploy:
-      replicas: 1
+      replicas: {{ node.count | default(1) }}
+{% endfor %}
 
 configs:
   jenkins:

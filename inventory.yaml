@@ -8,6 +8,10 @@ all:
     creds_ldap_bind_password: admin
     creds_ldap_bind_username: cn=admin,dc=example,dc=org
     compose_version: 3.8
+    jenkins_nodes:
+      openjdk:
+        image: openjdk:17-slim
+        count: 3
     users:
       jjas:
         name: Kuba Jasko
