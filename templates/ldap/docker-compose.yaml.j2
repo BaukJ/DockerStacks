@@ -22,13 +22,18 @@ services:
     image: osixia/phpldapadmin
     ports:
       - 6443:443
-      # - 680:80
+      - 680:80
     environment:
      - PHPLDAPADMIN_LDAP_HOSTS=ldap
     networks:
       ldap: {}
     depends_on:
       - app
+    labels:
+      - "traefik.enable=true"
+      - "traefik.port=680"
+      - "traefik.http.routers.ldap-admin.rule=PathPrefix(`/ldap-admin`)"
+      - "traefik.http.services.ldap-admin.loadbalancer.server.port=6443"
 
 
 configs:
@@ -38,5 +43,6 @@ configs:
 
 networks:
   ldap:
+    name: ldap
+  traefik:
     external: true
-    name: common_ldap

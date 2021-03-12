@@ -18,11 +18,29 @@ services:
     configs:
       - source: jenkins
         target: /jenkins.yaml
-    deploy:
-      labels:
-        - "traefik.enable=true"
-        - "traefik.seg-main.frontend.rule=PathPrefix:/jenkins"
-        - "traefik.port=9000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jenkins-master.rule=PathPrefix(`/jenkins`)"
+      - "traefik.http.routers.jenkins-master.entrypoints=web"
+      - "traefik.http.services.jenkins-master.loadbalancer.server.port=9000"
+      - "traefik.http.services.jenkins-master.loadbalancer.healthcheck.port=9000"
+
+
+  bare:
+    image: jenkins/jenkins:lts-centos7
+    environment:
+      - "jenkins.install.runSetupWizard=false"
+      - "JENKINS_OPTS=--prefix=/bare-jenkins --httpPort=9001"
+    ports:
+      - 9001:9001
+    networks:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jenkins-bare.rule=PathPrefix(`/bare-jenkins`)"
+      - "traefik.http.routers.jenkins-bare.entrypoints=web"
+      - "traefik.http.services.jenkins-bare.loadbalancer.server.port=9001"
+      - "traefik.http.services.jenkins-bare.loadbalancer.healthcheck.port=9001"
 
 {%for id,node in jenkins_nodes.items() %}
   slave_{{ id }}:
@@ -48,7 +66,5 @@ networks:
   jenkins: {}
   ldap:
     external: true
-    name: common_ldap
   traefik:
     external: true
-    name: common_traefik

@@ -48,22 +48,21 @@
             state: directory
             owner: "1000"
           become: true
+        # Just using compose to build - does not work without also running
         - docker_compose:
             build: yes
             project_src: "{{ playbook_dir }}/stacks/{{ stack }}"
-            state: absent
+            state: present
+            stopped: yes
           loop: [jenkins]
-          #loop: [common, traefik, ldap, gerrit, jenkins]
           loop_control:
             loop_var: stack
-        # Just using compose for now. If we want to deploy we'd have to push images somewhere
         - docker_stack:
             state: present
             name: "{{ stack }}"
             compose:
               - "{{ playbook_dir }}/stacks/{{ stack }}/docker-compose.yaml"
-          #loop: [common, traefik, ldap, gerrit, jenkins]
-          loop: [common, traefik, ldap, jenkins]
+          loop: [traefik, ldap, gerrit, jenkins]
           loop_control:
             loop_var: stack
 
@@ -77,7 +76,7 @@
             host: "{{ web_ip }}"
         - name: Initialise admin user
           uri:
-            url: "http://{{ web_ip }}:8080/login?username={{ creds_admin_username }}&password={{ creds_admin_password }}"
+            url: "http://{{ web_ip }}:8080/gerrit/login?username={{ creds_admin_username }}&password={{ creds_admin_password }}"
             status_code: [302]
             method: POST
         - file:
@@ -88,7 +87,7 @@
           register: admin_rsa
         - name: Upload gerrit ssh key
           uri:
-            url: "http://{{ web_ip }}:8080/a/accounts/self/sshkeys"
+            url: "http://{{ web_ip }}:8080/gerrit/a/accounts/self/sshkeys"
             user: "{{ creds_admin_username }}"
             password: "{{ creds_admin_password }}"
             method: POST
@@ -109,7 +108,7 @@
                 User {{ creds_admin_username }}
         - name: Create template projects
           uri:
-            url: "http://{{ web_ip }}:8080/a/projects/{{ ('common/' + project.name) | urlencode | replace('/', '%2f') }}"
+            url: "http://{{ web_ip }}:8080/gerrit/a/projects/{{ ('common/' + project.name) | urlencode | replace('/', '%2f') }}"
             user: "{{ creds_admin_username }}"
             password: "{{ creds_admin_password }}"
             method: POST
@@ -154,14 +153,14 @@
       block:
         - debug:
             msg: |
-              Gerrit     available here: http://{{  web_ip }}:8080 |
+              Gerrit     available here: http://{{  web_ip }}:8080/gerrit |
               LDAP Admin available here: https://{{ web_ip }}:6443 |
 
 
 
         #- name: Create base projects
         #  uri:
-        #    url: "http://{{ web_ip }}:8080/a/projects/BASE-{{ user.id }}"
+        #    url: "http://{{ web_ip }}:8080/gerrit/a/projects/BASE-{{ user.id }}"
         #    user: "{{ creds_admin_username }}"
         #    password: "{{ creds_admin_password }}"
         #    method: POST
@@ -176,7 +175,7 @@
         #    loop_var: user
         #- name: Create User groups
         #  uri:
-        #    url: "http://{{ web_ip }}:8080/a/groups/group-{{ user.id }}"
+        #    url: "http://{{ web_ip }}:8080/gerrit/a/groups/group-{{ user.id }}"
         #    user: "{{ creds_admin_username }}"
         #    password: "{{ creds_admin_password }}"
         #    method: POST

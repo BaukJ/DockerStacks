@@ -34,26 +34,28 @@ services:
       # - STANDBY_URL=ssh://standby:29418/${name}.git
       # - STANDBY_THREADS=3
       - HTTPD_LISTENURL=proxy-http://*:8080/gerrit/
-    depends_on:
-      - db
-    deploy:
-      labels:
-        - "traefik.enable=true"
-        - "traefik.seg-main.frontend.rule=PathPrefix:/gerrit"
-        - "traefik.port=8080"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gerrit-master.rule=PathPrefix(`/gerrit`)"
+      - "traefik.http.routers.gerrit-master.entrypoints=web"
+      - "traefik.http.services.gerrit-master.loadbalancer.server.port=8080"
+      - "traefik.http.services.gerrit-master.loadbalancer.healthcheck.port=8080"
+      #- "traefik.tcp.routers.gerrit_ssh.rule=____"
+      #- "traefik.tcp.services.gerrit_ssh.loadbalancer.server.port=29418"
 
   standby:
     image: openfrontier/gerrit:{{ gerrit_version }}
     volumes:
       - ./mounts/standby:/var/gerrit/review_site
     ports:
-      - 38080:8080
+      - 38080:38080
       - 39418:29418
     networks:
       ldap: {}
       default: {}
     environment:
       - WEBURL=http://{{ web_ip }}:38080
+      - HTTPD_LISTENURL=proxy-http://*:38080/bare-gerrit/
       - DATABASE_TYPE=mysql
       - DB_PORT_3306_TCP_ADDR=db
       - DB_PORT_3306_TCP_PORT=3306
@@ -66,8 +68,14 @@ services:
       - LDAP_ACCOUNTBASE=dc=example,dc=org
       - LDAP_PASSWORD=admin
       - LDAP_USERNAME=cn=admin,dc=example,dc=org
-    depends_on:
-      - db
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gerrit-standby.rule=PathPrefix(`/standby-gerrit`)"
+      - "traefik.http.routers.gerrit-standby.entrypoints=web"
+      - "traefik.http.services.gerrit-standby.loadbalancer.server.port=8080"
+      - "traefik.http.services.gerrit-standby.loadbalancer.healthcheck.port=8080"
+      #- "traefik.tcp.routers.gerrit-standby_ssh.rule=____"
+      #- "traefik.tcp.services.gerrit-standby_ssh.loadbalancer.server.port=29418"
     deploy:
       replicas: 0
 
@@ -84,15 +92,8 @@ services:
       - MYSQL_ROOT_PASSWORD=gerrit_test
       - MYSQL_DATABASE=gerritdb
 
-    
-# configs:
-#   gerrit_replication:
-#     file: configs/gerrit-replication.config
-
 networks:
   ldap:
     external: true
-    name: common_ldap
   traefik:
     external: true
-    name: common_traefik
