@@ -5,8 +5,8 @@ services:
     image: openfrontier/gerrit:{{ gerrit_version }}
     # entrypoint: bash -c "while [ 0 ]; do sleep 10; done"
     volumes:
-      - ./mounts/app:/var/gerrit/review_site
-      - ./mounts/app-ssh:/var/gerrit/.ssh
+      - {{ swarm_mounts_dir }}/gerrit/app:/var/gerrit/review_site
+      - {{ swarm_mounts_dir }}/gerrit/app-ssh:/var/gerrit/.ssh
     ports:
       - 8080:8080
       - 29418:29418
@@ -46,7 +46,7 @@ services:
   standby:
     image: openfrontier/gerrit:{{ gerrit_version }}
     volumes:
-      - ./mounts/standby:/var/gerrit/review_site
+      - {{ swarm_mounts_dir }}/gerrit/standby:/var/gerrit/review_site
     ports:
       - 38080:38080
       - 39418:29418
@@ -83,7 +83,7 @@ services:
     image: mysql:5.7.27
     command: --sql-mode="STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION"
     volumes:
-      - ./mounts/db:/var/lib/mysql
+      - {{ swarm_mounts_dir }}/gerrit/db:/var/lib/mysql
     networks:
       default:
         aliases:

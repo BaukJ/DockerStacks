@@ -7,6 +7,12 @@ all:
     creds_admin_password_md5: ISMvKXpXpadDiUoOSoAfww==
     creds_ldap_bind_password: admin
     creds_ldap_bind_username: cn=admin,dc=example,dc=org
+    swarm_base_dir: /docker
+    swarm_stacks_dir: /docker/stacks
+    swarm_mounts_dir: /docker/mounts
+    # TODO: Setup some sort of mount
+    use_efs: false
+    use_nfs: true
     compose_version: 3.8
     jenkins_nodes:
       openjdk:

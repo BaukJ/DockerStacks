@@ -1,0 +1,13 @@
+---
+plugin: aws_ec2
+regions:
+  - us-east-1
+
+aws_profile: acg
+
+#filters:
+  #tag:Project: "CI/CD Code School - Kuba"
+
+keyed_groups:
+  - prefix: tag
+    key: tags

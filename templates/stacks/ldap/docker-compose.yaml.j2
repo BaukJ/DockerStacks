@@ -8,8 +8,8 @@ services:
     #  - 389:389
     #  - 636:636
     volumes:
-      - ./mounts/app:/var/lib/ldap
-      - ./mounts/app-slapd.d:/etc/ldap/slapd.d
+      - {{ swarm_mounts_dir }}/ldap/app:/var/lib/ldap
+      - {{ swarm_mounts_dir }}/ldap/app-slapd.d:/etc/ldap/slapd.d
     configs:
       - source: ldap
         target: /container/service/slapd/assets/config/bootstrap/ldif/custom/config.ldif

@@ -2,13 +2,13 @@ version: '{{ compose_version }}'
 
 services:
   master:
-    image: jenkins_master
+    image: bauk/jenkins_master
     build: images/master
     environment:
       JENKINS_OPTS: "--prefix=/jenkins --httpPort=9000"
       CASC_JENKINS_CONFIG: "/jenkins.yaml"
     volumes:
-      - ./mounts/master:/var/jenkins_home
+      - {{ swarm_mounts_dir }}/jenkins/master:/var/jenkins_home
     ports:
       - 9000:9000
     networks:
