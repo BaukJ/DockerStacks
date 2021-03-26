@@ -1,0 +1,13 @@
+- pip:
+    executable: pip2
+    name: [docker, pip==20.3.3]
+  become: true
+- pip:
+    executable: /usr/local/bin/pip3
+    name: [jsondiff, compose, docker-compose]
+  become: true
+- yum:
+    name: libselinux-python3
+  become: true
+  vars:
+    ansible_python_interpreter: /usr/bin/python2

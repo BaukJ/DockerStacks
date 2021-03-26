@@ -1,0 +1,20 @@
+- ipify_facts:
+  register: ipify
+- file:
+    path: "{{ output_dir }}/keys"
+    state: directory
+- openssh_keypair:
+    path: "{{ output_dir }}/keys/infra_rsa"
+    mode: 0600
+  register: infra_rsa
+  tags:
+    - deploy
+- terraform:
+    state: present
+    project_path: '{{ playbook_dir }}/terraform'
+    variables:
+      ssh_cidr: "{{ ipify.ansible_facts.ipify_public_ip }}/32"
+      public_key_path: "{{ infra_rsa.filename }}.pub"
+  register: terraform
+- debug:
+    msg: "{{ terraform.outputs.meta.value }}"

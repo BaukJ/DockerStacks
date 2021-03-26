@@ -1,0 +1,109 @@
+    - name: Wait for gerrit ssh port to be up
+      wait_for:
+        port: 29418
+        host: "{{ web_ip }}"
+    - name: Initialise admin user
+      uri:
+        url: "http://{{ web_ip }}:8080/gerrit/login?username={{ creds_admin_username }}&password={{ creds_admin_password }}"
+        status_code: [302]
+        method: POST
+    - openssh_keypair:
+        path: "{{ output_dir }}/keys/admin_rsa"
+      register: admin_rsa
+    - name: Upload gerrit ssh key
+      uri:
+        url: "http://{{ web_ip }}:8080/gerrit/a/accounts/self/sshkeys"
+        user: "{{ creds_admin_username }}"
+        password: "{{ creds_admin_password }}"
+        method: POST
+        status_code: [200, 201]
+        headers:
+          Content-Type: plain/text
+        body: "{{ admin_rsa.public_key }}"
+    - blockinfile:
+        path: "{{ ansible_env.HOME }}/.ssh/config"
+        block: |
+          Host gerrit_local_admin
+            HostName "{{ web_ip }}"
+            Port 29418
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+            IdentityFile {{ admin_rsa.filename }}
+            IdentitiesOnly yes
+            User {{ creds_admin_username }}
+    - name: Create template projects
+      uri:
+        url: "http://{{ web_ip }}:8080/gerrit/a/projects/{{ ('common/' + project.name) | urlencode | replace('/', '%2f') }}"
+        user: "{{ creds_admin_username }}"
+        password: "{{ creds_admin_password }}"
+        method: POST
+        status_code: [200, 201, 404] # 404 if already created
+        #status_code: [200, 201] # 404 if already created
+        headers:
+          Content-Type: application/json
+        body_format: json
+        body:
+          description": "Common template project"
+      loop:
+        - name: spring-petclinic
+      loop_control:
+        loop_var: project
+    - name: Upload spring-petclinic repo
+      shell: |
+        rm -rf tmp_upload_repos
+        mkdir tmp_upload_repos
+        cd tmp_upload_repos
+        git clone git@github.com:BaukJ/spring-petclinic.git
+
+        cd petclinic
+        git remote add gerrit ssh://gerrit_local_admin/common/spring-petclinic
+        git push gerrit main:refs/heads/master
+
+        cd ../..
+        rm -r tmp_upload_repos
+
+        ssh gerrit_local_admin gerrit set-members Administrators --add {{ users.keys() | join( ' --add ' ) }}
+    - name: Setup Users
+      include: plays/setup_user.yaml
+      loop: "{{ users.keys() }}"
+      loop_control:
+        loop_var: user
+
+
+
+
+
+
+    #- name: Create base projects
+    #  uri:
+    #    url: "http://{{ web_ip }}:8080/gerrit/a/projects/BASE-{{ user.id }}"
+    #    user: "{{ creds_admin_username }}"
+    #    password: "{{ creds_admin_password }}"
+    #    method: POST
+    #    status_code: [200, 201, 404] # 404 if already created
+    #    headers:
+    #      Content-Type: application/json
+    #    body_format: json
+    #    body:
+    #      description": "Base parent project for user: {{ user.id }}"
+    #  loop: "{{ users }}"
+    #  loop_control:
+    #    loop_var: user
+    #- name: Create User groups
+    #  uri:
+    #    url: "http://{{ web_ip }}:8080/gerrit/a/groups/group-{{ user.id }}"
+    #    user: "{{ creds_admin_username }}"
+    #    password: "{{ creds_admin_password }}"
+    #    method: POST
+    #    status_code: [200, 201]
+    #    headers:
+    #      Content-Type: application/json
+    #    body_format: json
+    #    body:
+    #      owner: "{{ user.id }}"
+    #      members:
+    #        - username: "{{ user.id }}"
+    #  loop: "{{ users }}"
+    #  loop_control:
+    #    loop_var: user
+

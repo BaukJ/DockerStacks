@@ -1,9 +1,3 @@
-provider "aws" {
-  profile = "acg"
-  region  = "us-east-1"
-}
-
-
 resource "aws_key_pair" "devops" {
   key_name   = "devops"
   public_key = file(var.public_key_path)
@@ -12,7 +6,7 @@ resource "aws_key_pair" "devops" {
 
 
 resource "aws_instance" "masters" {
-  count             = local.multi_node ? var.master_count : 0
+  count             = local.multi_node ? var.master_count : 1
   ami               = data.aws_ami.aws_linux.id
   availability_zone = data.aws_availability_zones.available.names[count.index] # TODO use a modulus
   instance_type     = var.master_type

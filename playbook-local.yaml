@@ -1,0 +1,66 @@
+- name: Local Setup
+  hosts: localhost
+  connection: local
+  vars:
+    output_dir: "{{ playbook_dir }}/outputs"
+  tasks:
+    - name: Local Setup
+      include: plays/local_server_setup.yaml
+      tags:
+        - never
+        - setup
+
+    - import_role:
+        name: templates
+      tags:
+        - generate
+
+    - docker_image:
+        name: bauk/jenkins_master
+        push: yes
+        build:
+          path: "{{ output_dir }}/stacks/jenkins/images/master/"
+        state: present
+      tags:
+        - build
+
+- name: Swarm Setup
+  hosts: localhost
+  vars:
+    output_dir: "{{ playbook_dir }}/outputs"
+    ansible_ssh_private_key_file: "{{ hostvars['localhost'].infra_rsa.filename }}"
+    ansible_ssh_user: "ec2-user"
+  tags:
+    - deploy
+  become: true
+  tasks:
+    - name: Copy in stack config
+      copy:
+        src: "{{ output_dir }}/stacks"
+        dest: /docker/stacks
+    - debug:
+        msg: "KEYFILE: {{ ansible_ssh_private_key_file }}"
+    - name: Deploy
+      include: plays/deploy.yaml
+
+- hosts: localhost
+  connection: local
+  vars:
+    output_dir: "{{ playbook_dir }}/outputs"
+  tasks:
+    - name: PostDeploy
+      include: plays/postdeploy.yaml
+      tags:
+        - postdeploy
+
+    - name: Lesson1
+      tags: [never, lesson1]
+      block: []
+
+    - name: Info
+      tags: [info, always]
+      block:
+        - debug:
+            msg:
+              Gerrit: "http://{{  web_ip }}:8080/gerrit"
+              LDAP: "https://{{ web_ip }}:6443"

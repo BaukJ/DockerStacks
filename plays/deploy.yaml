@@ -1,0 +1,50 @@
+- get_url:
+    url: https://download.docker.com/linux/centos/docker-ce.repo
+    dest: /etc/yum.repos.d/docker-ce.repo
+  when: ansible_distribution == 'CentOS'
+- yum:
+    name:
+      - "{{ 'docker-ce' if ansible_distribution == 'CentOS' else 'docker' }}"
+      - python-pip
+- pip:
+    name: [docker, jsondiff]
+  become: true
+- service:
+    name: docker
+    enabled: true
+    state: started
+# TODO: Curruntly only one master allowed. Look to either EFS or glusterFS if we want to have a multi-node setup (probably best to have a flag toggling single node or multi-node-efs
+
+- name: Setup swarm
+  docker_swarm:
+    state: present
+#- name: Gerrit invalid DNS workaround
+#  block:
+#    - file:
+#        dest: "/docker/stacks/gerrit/mounts/app/lib"
+#        state: directory
+#      register: gerrit_lib
+#    - get_url:
+#        url: https://repo1.maven.org/maven2/mysql/mysql-connector-java/5.1.43/mysql-connector-java-5.1.43.jar
+#        dest: "/docker/stacks/gerrit/mounts/app/lib/"
+#      when: gerrit_lib.changed
+- file:
+    dest: "{{ swarm_mounts_dir }}/{{ item }}"
+    state: directory
+    owner: "1000"
+  loop:
+    - gerrit/app
+    - gerrit/app-ssh
+    - gerrit/standby
+    - gerrit/db
+    - jenkins/master
+    - ldap/app
+    - ldap/app-slapd.d
+- docker_stack:
+    state: present
+    name: "{{ stack }}"
+    compose:
+      - "/docker/stacks/{{ stack }}/docker-compose.yaml"
+  loop: [traefik, ldap, gerrit, jenkins]
+  loop_control:
+    loop_var: stack
