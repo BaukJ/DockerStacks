@@ -1,6 +1,6 @@
 variable "master_type" {
   type    = string
-  default = "t2.micro"
+  default = "t3.medium"
 }
 variable "worker_type" {
   type    = string
@@ -25,10 +25,13 @@ variable "public_key_path" {
   default = "../outputs/keys/infra_rsa.pub"
 }
 variable "cluster_type" {
-  type = string
+  type    = string
   default = "single"
   validation {
-    condition = var.cluster_type == "single" || var.cluster_type == "efs"
+    condition     = var.cluster_type == "single" || var.cluster_type == "efs"
     error_message = "The cluster_type must be one of single, efs."
   }
+}
+variable "exposed_ports" {
+  default = {}
 }

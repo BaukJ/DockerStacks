@@ -12,9 +12,9 @@ jenkins:
         - displayNameAttributeName: "cn"
           groupSearchBase: "ou=groups"
           inhibitInferRootDN: false
-          managerDN: "cn=admin,dc=example,dc=org"
-          managerPasswordSecret: "{AQAAABAAAAAQH1PGC4nQAshwNpFa62LKm1hnD3tVeqW/hr/hl6JBkPA=}"
-          rootDN: "dc=example,dc=org"
+          managerDN: "{{ creds_ldap_bind_username }}"
+          managerPasswordSecret: "{{ creds_ldap_bind_password }}"
+          rootDN: "{{ creds_ldap_bind_username.split(",")[1:] | join(",") }}"
           server: "ldap"
           userSearchBase: "ou=people"
   nodes:

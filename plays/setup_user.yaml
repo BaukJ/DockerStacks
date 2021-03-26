@@ -1,6 +1,6 @@
 - name: Create user ssh key
   openssh_keypair:
-    path: "{{ playbook_dir }}/stacks/gerrit/keys/{{ user }}_rsa"
+    path: "{{ output_dir }}//keys/gerrit_{{ user }}_rsa"
   register: user_rsa
 - name: Add user ssh key and to Admin group
   shell: |

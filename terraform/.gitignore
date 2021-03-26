@@ -1,2 +1,4 @@
 /.terraform*
 /terraform.tfstate*
+# This is generated with dynaic content or content from ansible inventory
+/terraform.tfvars

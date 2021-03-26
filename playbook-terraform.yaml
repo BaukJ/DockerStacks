@@ -41,7 +41,7 @@
   tasks:
     - name: Copy in stack config
       copy:
-        src: "{{ output_dir }}/stacks"
+        src: "{{ output_dir }}/stacks/"
         dest: /docker/stacks
     - debug:
         msg: "KEYFILE: {{ ansible_ssh_private_key_file }}"
@@ -65,8 +65,12 @@
     - name: Info
       tags: [info, always]
       block:
-        - debug:
-            msg:
+        - set_fact:
+            outputs_urls:
               Gerrit: "http://{{  web_ip }}:8080/gerrit"
               LDAP: "https://{{ web_ip }}:6443"
               TERRAFORM: "{{ terraform.outputs.meta.value | default('N/A') }}"
+        - set_fact:
+            outputs: "{{ outputs | combine({'urls': outputs_urls}) }}"
+        - debug:
+            msg: "{{ outputs }}"

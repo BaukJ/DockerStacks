@@ -1,20 +1,40 @@
 - ipify_facts:
   register: ipify
+  tags:
+    - terraform_setup
 - file:
     path: "{{ output_dir }}/keys"
     state: directory
+  tags:
+    - terraform_setup
 - openssh_keypair:
     path: "{{ output_dir }}/keys/infra_rsa"
     mode: 0600
   register: infra_rsa
   tags:
     - deploy
+    - terraform_setup
+- copy:
+    dest: '{{ playbook_dir }}/terraform/terraform.tfvars'
+    content: |
+      ssh_cidr        = "{{ ipify.ansible_facts.ipify_public_ip }}/32"
+      public_key_path = "{{ infra_rsa.filename }}.pub"
+      exposed_ports = {
+      {% for port,config in exposed_ports.items() %}
+        {{ port }} = {}
+      {% endfor %}
+      }
+  tags:
+    - terraform_setup
 - terraform:
     state: present
     project_path: '{{ playbook_dir }}/terraform'
-    variables:
-      ssh_cidr: "{{ ipify.ansible_facts.ipify_public_ip }}/32"
-      public_key_path: "{{ infra_rsa.filename }}.pub"
+    #variables:
+    #  ssh_cidr: "{{ ipify.ansible_facts.ipify_public_ip }}/32"
+    #  public_key_path: "{{ infra_rsa.filename }}.pub"
   register: terraform
 - debug:
     msg: "{{ terraform.outputs.meta.value }}"
+- set_fact:
+    outputs: "{{ outputs | combine({'terraform': terraform.outputs.meta.value }) }}"
+    web_ip: "{{ terraform.outputs.meta.value.eip | default(terraform.outputs.meta.value.lb_ip) }}"
